@@ -1,56 +1,70 @@
-export const vent: Vent = {
-  callbacks: {},
+/**
+ * A simple event emitter class
+ */
+export class Vent {
+  /** internal store of the callbacks. Keyed by the eventName. */
+  callbacks: Record<string, Function[]>
 
-  on: function (eventName, callback) {
+  constructor() {
+    this.callbacks = {}
+  }
+
+  /**
+   *
+   * @param eventName
+   * @param callback
+   */
+  on = (eventName: string, callback: Function) => {
     if (!this.hasEvent(eventName)) {
-      this.callbacks[eventName] = [];
+      this.callbacks[eventName] = []
     }
-    this.callbacks[eventName].push(callback);
+
+    this.callbacks[eventName] = [...this.callbacks[eventName], callback]
 
     // use this as an ID to unsubscribe
     return {
       eventName,
       eventPosition: this.callbacks[eventName].length - 1,
-    };
-  },
+    }
+  }
+
   /**
    * checks whether an event is bound for eventName
-   * @param  {string} eventName name of the event
-   * @return {Boolean}          Boolean whether or not the event exists
+   * @param eventName name of the event
+   * @return whether or not the event exists
    */
-  hasEvent: function (eventName) {
-    return (
-      typeof this.callbacks[eventName] !== "undefined" &&
-      this.callbacks[eventName].length > 0
-    );
-  },
+  hasEvent = (eventName: string) => {
+    return !!this.callbacks[eventName] && this.callbacks[eventName].length > 0
+  }
 
   /**
    * used to unsubscribe a single event subscription
    */
-  off: function (eventToRemove) {
-    this.callbacks[eventToRemove.eventName].splice(
-      eventToRemove.eventPosition,
-      1
-    );
-  },
+  off = (eventToRemove: VentEvent) => {
+    this.callbacks[eventToRemove.eventName] = [
+      ...this.callbacks[eventToRemove.eventName].splice(
+        0,
+        eventToRemove.eventPosition,
+      ),
+      ...this.callbacks[eventToRemove.eventName].splice(
+        eventToRemove.eventPosition + 1,
+      ),
+    ]
+  }
 
   /**
    * used to trigger an event, and all subscribed callbacks
+   *
+   * To pass arguments to the callback, pass them in as additional arguments
    */
-  trigger: function (eventName) {
-    // convert arguments into a 'real' array
-    var args = Array.prototype.slice.call(arguments);
-
-    // remove the eventName argument from our new array
-    args = args.slice(1);
-
+  trigger = (eventName: string, ...args: unknown[]) => {
     if (!this.hasEvent(eventName)) {
-      throw new Error("No event bound for " + eventName);
+      // Event does not exist, nothing to call
+      return
     }
 
     this.callbacks[eventName].map((callback) => {
-      callback.apply(this, args);
-    });
-  },
-};
+      callback.apply(null, args)
+    })
+  }
+}
